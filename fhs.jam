@@ -226,18 +226,4 @@ local rule get-prefix ( package-name : requirements * ) {
   }
 
   return $(prefix) ;
-}     
-
-rule tag ( name : type ? : property-set ) {
-  if $(type) in STATIC_LIB SHARED_LIB IMPORT_LIB {
-    local result = [ common.format-name <base> : $(name) : $(type) : $(property-set) ] ;
-
-    if $(type) = SHARED_LIB && (
-       ! ( [ $(property-set).get <target-os> ] in windows cygwin darwin aix ) &&
-       ! ( [ $(property-set).get <toolset> ] in pgi ) ) {
-      result = $(result).$(VERSION)  ;
-    }
-
-    return $(result) ;
-  }
-}      
+}

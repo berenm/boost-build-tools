@@ -1,5 +1,6 @@
 import os ;
 import path ;
+import common ;
 
 using gcc : : g++-4.6 ;
 
@@ -32,3 +33,17 @@ modules.poke DESTDIR : $(DESTDIR) ;
 modules.poke LIB_SEARCH : $(LIB_SEARCH) ;
 modules.poke INCLUDES : $(INCLUDES) ;
 modules.poke VERSION : $(VERSION) ;
+
+rule tag ( name : type ? : property-set ) {
+  if $(type) in STATIC_LIB SHARED_LIB IMPORT_LIB {
+    local result = [ common.format-name <base> : $(name) : $(type) : $(property-set) ] ;
+
+    if $(type) = SHARED_LIB && (
+       ! ( [ $(property-set).get <target-os> ] in windows cygwin darwin aix ) &&
+       ! ( [ $(property-set).get <toolset> ] in pgi ) ) {
+      result = $(result).$(VERSION) ;
+    }
+
+    return $(result) ;
+  }
+}
