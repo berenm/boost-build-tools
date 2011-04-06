@@ -47,6 +47,7 @@ rule build ( name package-name ? : binaries * : libraries * : requirements * ) {
 
   local target-address-models = [ property.select <target-address-models> : $(requirements) ] ;
   target-address-models = $(target-address-models:G=) ;
+  target-address-models ?= "" ;
 
   local lib-shared-static = $(name)-lib-shared $(name)-lib-static ;
   alias $(name)-lib : $(lib-shared-static)$(target-address-models) ;
@@ -114,6 +115,7 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
   
   local target-address-models = [ property.select <target-address-models> : $(requirements) ] ;
   target-address-models = $(target-address-models:G=) ;
+  target-address-models ?= "" ;
 
   # First, figure out all locations. Use the default if no prefix option given.
   local prefix = [ get-prefix $(name) : $(requirements) ] ;
@@ -137,29 +139,33 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
   if $(target-address-models) {
     for target-address-model in $(target-address-models) {
       stage.install $(name)-lib-shared$(target-address-model)
-                  : $(libraries)/<link>shared/<address-model>$(target-address-model)
+                  : $(libraries)
                   : $(requirements)
                     <location>$(lib-locate)$(target-address-model)
                     <install-type>SHARED_LIB
+                    <link>shared
                     <address-model>$(target-address-model) ;
       stage.install $(name)-lib-static$(target-address-model)
-                  : $(libraries)/<link>static/<address-model>$(target-address-model)
+                  : $(libraries)
                   : $(requirements)
                     <location>$(lib-locate)$(target-address-model)
                     <install-type>STATIC_LIB
+                    <link>static
                     <address-model>$(target-address-model) ;
     }
   } else {
     stage.install $(name)-lib-shared
-                : $(libraries)/<link>shared
+                : $(libraries)
                 : $(requirements)
-                <location>$(lib-locate)
-                <install-type>SHARED_LIB ;
+                  <location>$(lib-locate)
+                  <install-type>SHARED_LIB
+                  <link>shared ;
     stage.install $(name)-lib-static
-                : $(libraries)/<link>static
+                : $(libraries)
                 : $(requirements)
-                <location>$(lib-locate)
-                <install-type>STATIC_LIB ;
+                  <location>$(lib-locate)
+                  <install-type>STATIC_LIB
+                  <link>static ;
   }
   
   stage.install $(name)-headers
