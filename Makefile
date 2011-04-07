@@ -7,11 +7,15 @@ build: update-tools
 
 clean: update-tools
 	# clean...
-	bjam --clean --user-config=./build-config.jam
+	bjam --clean build --user-config=./build-config.jam
 
 install: update-tools
 	# install...
 	bjam install ${VARIANT} --user-config=./build-config.jam --prefix=${DESTDIR}
+
+uninstall: update-tools
+	# uninstall...
+	bjam --clean install --user-config=./build-config.jam --prefix=${DESTDIR}
 
 distclean: update-tools clean
 
