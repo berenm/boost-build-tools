@@ -1,3 +1,6 @@
+# Distributed under the Boost Software License, Version 1.0.
+# See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
+
 DESTDIR?=dist/
 VARIANT?=debug
 
@@ -23,7 +26,7 @@ update-tools:
 	# updating tools...
 	@git remote add build-tools http://github.com/rout/boost-build-tools.git 2>/dev/null |:
 	@git fetch build-tools master:build-tools 2>/dev/null                                |:
-	@git checkout build-tools `git ls-tree --name-only build-tools | grep -v '^\.'`      |:
+	@git checkout build-tools Makefile fhs.jam build-config.jam                          |:
 	@git reset `git ls-tree --name-only build-tools | grep -v '^\.'` 2>/dev/null         |:
 	@git branch -D build-tools 2>/dev/null 1>/dev/null                                   |:
 	@git remote rm build-tools                                                           |:
