@@ -5,6 +5,8 @@ import os ;
 import path ;
 import common ;
 
+using gcc : : ccache g++ ;
+
 path-constant BUILD_ROOT : . ;
 path-constant HOME : [ os.home-directories ] ;
 path-constant VERSION_FILE : $(BUILD_ROOT)/version ;
