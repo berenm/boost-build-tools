@@ -1,0 +1,70 @@
+#!/bin/bash
+
+rm /tmp/multiarch.sed
+
+unsupported="(alpha|avr32|m32r|m68k|s390|sh3|sh4)"
+for arch in `dpkg-architecture -L | egrep -v "${unsupported}"`
+do
+  unset DEB_BUILD_ARCH DEB_BUILD_ARCH_OS DEB_BUILD_ARCH_CPU DEB_BUILD_ARCH_BITS DEB_BUILD_ARCH_ENDIAN DEB_BUILD_GNU_CPU DEB_BUILD_GNU_SYSTEM DEB_BUILD_GNU_TYPE DEB_BUILD_MULTIARCH DEB_HOST_ARCH DEB_HOST_ARCH_OS DEB_HOST_ARCH_CPU DEB_HOST_ARCH_BITS DEB_HOST_ARCH_ENDIAN DEB_HOST_GNU_CPU DEB_HOST_GNU_SYSTEM DEB_HOST_GNU_TYPE DEB_HOST_MULTIARCH
+  eval `dpkg-architecture -a$arch -s 2>/dev/null`
+
+  if [ "${DEB_HOST_ARCH_CPU}" = "amd64" ]
+  then
+    instruction_set=athlon64
+    architecture=x86
+  elif [ "${DEB_HOST_ARCH_CPU}" = "i386" ]
+  then
+    instruction_set=i486
+    architecture=x86
+  elif [ "${DEB_HOST_ARCH_CPU}" = "powerpc" ]
+  then
+    instruction_set=native
+    architecture=power
+  elif [ "${DEB_HOST_ARCH_CPU}" = "ppc64" ]
+  then
+    instruction_set=native
+    architecture=power
+  elif [ "${DEB_HOST_ARCH_CPU}" = "armeb" ]
+  then
+    instruction_set=native
+    architecture=arm
+  elif [ "${DEB_HOST_ARCH_CPU}" = "hppa" ]
+  then
+    instruction_set=native
+    architecture=parisc
+  elif [ "${DEB_HOST_ARCH_CPU}" = "mips" ]
+  then
+    instruction_set=native
+    architecture=mips32r2
+  elif [ "${DEB_HOST_ARCH_CPU}" = "mipsel" ]
+  then
+    instruction_set=native
+    architecture=mips32r2
+  elif [ "${DEB_HOST_ARCH_CPU}" = "sparc" ]
+  then
+    instruction_set=native
+    architecture=sparc
+  elif [ "${DEB_HOST_ARCH_CPU}" = "sparc64" ]
+  then
+    instruction_set=native
+    architecture=sparc
+  else
+    instruction_set=native
+    architecture=${DEB_HOST_ARCH_CPU}
+  fi
+
+  DEB_HOST_ARCH_CABI=${DEB_HOST_GNU_SYSTEM#${DEB_HOST_ARCH_OS}}
+  DEB_HOST_ARCH_CABI=${DEB_HOST_ARCH_CABI#-}
+  
+  kernels="${kernels} ${DEB_HOST_ARCH_OS}"
+  cabis="${cabis} ${DEB_HOST_ARCH_CABI}"
+  echo -n "feature.compose <target-architecture>${arch} : <address-model>${DEB_HOST_ARCH_BITS} <architecture>${architecture} <instruction-set>${instruction_set} <multiarch>${DEB_HOST_MULTIARCH} <kernel>${DEB_HOST_ARCH_OS} <abi>${DEB_HOST_ARCH_CABI} <cpu>${DEB_HOST_ARCH_CPU} <endian>${DEB_HOST_ARCH_ENDIAN} ;\n" >>/tmp/multiarch.sed
+done
+
+kernels=`echo ${kernels} | sed -re "s/ /\n/g" | sort | uniq`
+cabis=`echo ${cabis} | sed -re "s/ /\n/g" | sort | uniq`
+echo -n "feature.extend kernel : `echo ${kernels}` ;\n" >>/tmp/multiarch.sed
+echo -n "feature.extend abi : `echo ${cabis}` ;\n" >>/tmp/multiarch.sed
+
+cat multiarch.jam.in | sed -re "s@### BEGIN GENERATED CODE@### BEGIN GENERATED CODE\n`cat /tmp/multiarch.sed`@" > multiarch.jam
+

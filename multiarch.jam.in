@@ -8,11 +8,10 @@
 
 # Example usage:
 #
-#   fhs.install boost : <binaries>
-#                     : <libraries>
-#                     : <headers>
-#                     : <properties>
-#                     ;
+#   multiarch.install boost : <binaries>
+#                           : <libraries>
+#                           : <headers>
+#                           : <properties> ;
 #
 # This will install binaries, libraries and headers to the 'proper' location,
 # given by command line options --prefix, --exec-prefix, --bindir, --libdir and
@@ -35,58 +34,58 @@ import stage ;
 import targets ;
 import modules ;
 import common ;
+import string ;
+import set ;
+import sequence ;
 
-feature.feature target-address-models : 32 64 : free incidental ;
+.default-architecture = [ SHELL "dpkg-architecture -qDEB_BUILD_ARCH" ] ;
+.default-architecture = [ string.words "$(.default-architecture)" ] ;
+.architectures = [ SHELL "dpkg-architecture -L" ] ;
+.architectures = [ string.words "$(.architectures)" ] ;
+.architectures = [ set.difference $(.architectures) : $(.default-architecture) ] ;
+
+feature.feature target-architecture : $(.default-architecture) $(.architectures) : composite ;
+feature.feature kernel : : optional propagated ;
+feature.feature abi : : optional propagated ;
+feature.feature endian : little big : optional propagated ;
+feature.feature cpu : : free ;
+feature.feature multiarch : : free ;
+
+### BEGIN GENERATED CODE
+### END GENERATED CODE
 
 rule build ( name package-name ? : binaries * : libraries * : requirements * ) {
+  local properties = [ feature.expand-composites [ feature.add-defaults $(requirements) ] ] ;
   package-name ?= $(name) ;
 
-  local target-address-models = [ property.select <target-address-models> : $(requirements) ] ;
-  target-address-models = $(target-address-models:G=) ;
-  target-address-models ?= "" ;
-
-  local lib-shared-static = $(name)-lib-shared $(name)-lib-static ;
-  alias $(name)-lib : $(lib-shared-static)$(target-address-models) ;
-  if $(target-address-models) {
-    for target-address-model in $(target-address-models) {
-      alias $(name)-lib-shared$(target-address-model)
-          : $(libraries)
-          : $(requirements)
-            <link>shared
-            <address-model>$(target-address-model) ;
-      alias $(name)-lib-static$(target-address-model)
-          : $(libraries)
-          : $(requirements)
-            <link>static
-            <address-model>$(target-address-model) ;
-    }
-  } else {
-    alias $(name)-lib-shared
-        : $(libraries)
-        : $(requirements)
-          <link>shared ;
-    alias $(name)-lib-static
-        : $(libraries)
-        : $(requirements)
-          <link>static ;
-  }
+  alias $(name)-lib-shared
+      : $(libraries)
+      : $(requirements)
+        <link>shared ;
+  alias $(name)-lib-static
+      : $(libraries)
+      : $(requirements)
+        <link>static ;
 
   alias $(name)
       : $(binaries)
-        $(name)-lib
+        $(name)-lib-shared
+        $(name)-lib-static
       : $(requirements) ;
 
   local c = [ project.current ] ;
   local project-module = [ $(c).project-module ] ;
   module $(project-module) {
     explicit $(name)
-             $(name)-lib
-             $(lib-shared-static)$(target-address-models)
+             $(name)-lib-shared
+             $(name)-lib-static
+             $(binaries)
              $(libraries) ;
   }
 }
 
 rule install ( name package-name ? : binaries * : libraries * : headers * : requirements * ) {
+  local properties = [ feature.expand-composites [ feature.add-defaults $(requirements) ] ] ;
   package-name ?= $(name) ;
 
   if [ MATCH --prefix=(.*) : [ modules.peek : ARGV ] ] {
@@ -109,10 +108,6 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
   install-header-subdir ?= "" ;
   requirements = [ property.change $(requirements) : <install-header-subdir> ] ;
   
-  local target-address-models = [ property.select <target-address-models> : $(requirements) ] ;
-  target-address-models = $(target-address-models:G=) ;
-  target-address-models ?= "" ;
-
   # First, figure out all locations. Use the default if no prefix option given.
   local prefix = [ get-prefix $(name) : $(requirements) ] ;
 
@@ -120,7 +115,8 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
   local bin-locate = [ option.get bindir : $(prefix)/bin ] ;
 
   # Object code libraries.
-  local lib-locate = [ option.get libdir : $(prefix)/lib ] ;
+  local triplet = [ property.select <multiarch> : $(properties) ] ;
+  local lib-locate = [ option.get libdir : $(prefix)/lib/$(triplet:G=) ] ;
 
   # Source header files.
   local include-locate = [ option.get includedir : $(prefix)/include ] ;
@@ -130,39 +126,18 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
               : $(requirements)
                 <location>$(bin-locate) ;
   
-  local lib-shared-static = $(name)-lib-shared $(name)-lib-static ;
-  alias $(name)-lib : $(lib-shared-static)$(target-address-models) ;
-  if $(target-address-models) {
-    for target-address-model in $(target-address-models) {
-      stage.install $(name)-lib-shared$(target-address-model)
-                  : $(libraries)
-                  : $(requirements)
-                    <location>$(lib-locate)$(target-address-model)
-                    <install-type>SHARED_LIB
-                    <link>shared
-                    <address-model>$(target-address-model) ;
-      stage.install $(name)-lib-static$(target-address-model)
-                  : $(libraries)
-                  : $(requirements)
-                    <location>$(lib-locate)$(target-address-model)
-                    <install-type>STATIC_LIB
-                    <link>static
-                    <address-model>$(target-address-model) ;
-    }
-  } else {
-    stage.install $(name)-lib-shared
-                : $(libraries)
-                : $(requirements)
-                  <location>$(lib-locate)
-                  <install-type>SHARED_LIB
-                  <link>shared ;
-    stage.install $(name)-lib-static
-                : $(libraries)
-                : $(requirements)
-                  <location>$(lib-locate)
-                  <install-type>STATIC_LIB
-                  <link>static ;
-  }
+  stage.install $(name)-lib-shared
+              : $(libraries)
+              : $(requirements)
+                <location>$(lib-locate)
+                <install-type>SHARED_LIB
+                <link>shared ;
+  stage.install $(name)-lib-static
+              : $(libraries)
+              : $(requirements)
+                <location>$(lib-locate)
+                <install-type>STATIC_LIB
+                <link>static ;
   
   stage.install $(name)-headers
               : $(headers)
@@ -172,7 +147,8 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
   
   alias $(name)
       : $(name)-bin
-        $(name)-lib
+        $(name)-lib-shared
+        $(name)-lib-static
         $(name)-headers ;
 
   local c = [ project.current ] ;
@@ -180,9 +156,9 @@ rule install ( name package-name ? : binaries * : libraries * : headers * : requ
   module $(project-module) {
     explicit $(name)
              $(name)-bin
-             $(name)-lib
-             $(name)-headers
-             $(lib-shared-static)$(target-address-models) ;
+             $(name)-lib-shared
+             $(name)-lib-static
+             $(name)-headers ;
   }
 }
 
