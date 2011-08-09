@@ -4,6 +4,7 @@
 import os ;
 import path ;
 import common ;
+import multiarch ;
 
 using gcc : : ccache /usr/lib/gcc-snapshot/bin/g++ ;
 
@@ -12,9 +13,7 @@ path-constant HOME : [ os.home-directories ] ;
 path-constant VERSION_FILE : $(BUILD_ROOT)/version ;
 path-constant DESTDIR : $(BUILD_ROOT)/dist/ ;
 
-constant LIB_SEARCH : <address-model>32:<search>$(HOME)/lib32&&/usr/local/lib/i386-linux-gnu&&/usr/lib/i386-linux-gnu/&&/usr/local/lib32&&/usr/lib32
-                      <address-model>64:<search>$(HOME)/lib64&&/usr/local/lib/x86_64-linux-gnu&&/usr/lib/x86_64-linux-gnu&&/usr/local/lib64&&/usr/lib64
-                      <search>$(HOME)/lib&&/usr/local/lib&&/usr/lib ;
+constant LIB_SEARCH : [ multiarch.search-path ] ;
 constant INCLUDES : <include>include&&$(HOME)/include/&&/usr/local/include/&&/usr/include/ ;
 
 if [ os.name ] = NT {
