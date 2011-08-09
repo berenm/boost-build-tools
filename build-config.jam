@@ -4,7 +4,6 @@
 import os ;
 import path ;
 import common ;
-import multiarch ;
 
 using gcc : : ccache /usr/lib/gcc-snapshot/bin/g++ ;
 
@@ -13,7 +12,6 @@ path-constant HOME : [ os.home-directories ] ;
 path-constant VERSION_FILE : $(BUILD_ROOT)/version ;
 path-constant DESTDIR : $(BUILD_ROOT)/dist/ ;
 
-constant LIB_SEARCH : [ multiarch.search-path ] ;
 constant INCLUDES : <include>include&&$(HOME)/include/&&/usr/local/include/&&/usr/include/ ;
 
 if [ os.name ] = NT {
@@ -32,7 +30,6 @@ modules.poke HOME : $(HOME) ;
 modules.poke BUILD_ROOT : $(BUILD_ROOT) ;
 modules.poke VERSION_FILE : $(VERSION_FILE) ;
 modules.poke DESTDIR : $(DESTDIR) ;
-modules.poke LIB_SEARCH : $(LIB_SEARCH) ;
 modules.poke INCLUDES : $(INCLUDES) ;
 modules.poke VERSION : $(VERSION) ;
 
