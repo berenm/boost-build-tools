@@ -14,7 +14,7 @@ do
     architecture=x86
   elif [ "${DEB_HOST_ARCH_CPU}" = "i386" ]
   then
-    instruction_set=i486
+    instruction_set=i686
     architecture=x86
   elif [ "${DEB_HOST_ARCH_CPU}" = "powerpc" ]
   then
