@@ -36,6 +36,7 @@ import modules ;
 import common ;
 import string ;
 import set ;
+import os ;
 import sequence ;
 
 .default-architecture = [ SHELL "dpkg-architecture -qDEB_BUILD_ARCH" ] ;
