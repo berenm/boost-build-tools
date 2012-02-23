@@ -55,16 +55,22 @@ do
 
   DEB_HOST_ARCH_CABI=${DEB_HOST_GNU_SYSTEM#${DEB_HOST_ARCH_OS}}
   DEB_HOST_ARCH_CABI=${DEB_HOST_ARCH_CABI#-}
-  
+
   kernels="${kernels} ${DEB_HOST_ARCH_OS}"
   cabis="${cabis} ${DEB_HOST_ARCH_CABI}"
+  cpus="${cpus} ${DEB_HOST_ARCH_CPU}"
+  multiarchs="${multiarchs} ${DEB_HOST_MULTIARCH}"
   echo -n "feature.compose <target-architecture>${arch} : <address-model>${DEB_HOST_ARCH_BITS} <architecture>${architecture} <instruction-set>${instruction_set} <multiarch>${DEB_HOST_MULTIARCH} <kernel>${DEB_HOST_ARCH_OS} <abi>${DEB_HOST_ARCH_CABI} <cpu>${DEB_HOST_ARCH_CPU} <endian>${DEB_HOST_ARCH_ENDIAN} ;\n" >>/tmp/multiarch.sed
 done
 
 kernels=`echo ${kernels} | sed -re "s/ /\n/g" | sort | uniq`
 cabis=`echo ${cabis} | sed -re "s/ /\n/g" | sort | uniq`
+cpus=`echo ${cpus} | sed -re "s/ /\n/g" | sort | uniq`
+multiarchs=`echo ${multiarchs} | sed -re "s/ /\n/g" | sort | uniq`
 echo -n "feature.extend kernel : `echo ${kernels}` ;\n" >>/tmp/multiarch.sed
 echo -n "feature.extend abi : `echo ${cabis}` ;\n" >>/tmp/multiarch.sed
+echo -n "feature.extend cpu : `echo ${cpus}` ;\n" >>/tmp/multiarch.sed
+echo -n "feature.extend multiarch : `echo ${multiarchs}` ;\n" >>/tmp/multiarch.sed
 
 cat multiarch.jam.in | sed -re "s@### BEGIN GENERATED CODE@### BEGIN GENERATED CODE\n`cat /tmp/multiarch.sed`@" > multiarch.jam
 
