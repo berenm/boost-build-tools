@@ -2,7 +2,7 @@
 # See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt
 
 DESTDIR?=
-TOOLSET?=gcc
+TOOLSET?=clang
 ARCH?=$(shell dpkg-architecture -qDEB_HOST_ARCH)
 UPDATE?=no
 
