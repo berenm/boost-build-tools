@@ -1,56 +1,56 @@
 #!/bin/bash
 
-rm /tmp/multiarch.sed
+temp_output=$(mktemp)
 
 unsupported="(alpha|avr32|m32r|m68k|s390|sh3|sh4)"
-for arch in `dpkg-architecture -L | egrep -v "${unsupported}"`
+for architecture in $(dpkg-architecture -L | egrep -v "${unsupported}")
 do
-  unset DEB_BUILD_ARCH DEB_BUILD_ARCH_OS DEB_BUILD_ARCH_CPU DEB_BUILD_ARCH_BITS DEB_BUILD_ARCH_ENDIAN DEB_BUILD_GNU_CPU DEB_BUILD_GNU_SYSTEM DEB_BUILD_GNU_TYPE DEB_BUILD_MULTIARCH DEB_HOST_ARCH DEB_HOST_ARCH_OS DEB_HOST_ARCH_CPU DEB_HOST_ARCH_BITS DEB_HOST_ARCH_ENDIAN DEB_HOST_GNU_CPU DEB_HOST_GNU_SYSTEM DEB_HOST_GNU_TYPE DEB_HOST_MULTIARCH
-  eval `dpkg-architecture -a$arch -s 2>/dev/null`
+  # Set all the variables
+  eval $(dpkg-architecture -a${architecture} -s 2>/dev/null)
 
   if [ "${DEB_HOST_ARCH_CPU}" = "amd64" ]
   then
-    instruction_set=athlon64
-    architecture=x86
+    DEB_HOST_ARCH_ISET=athlon64
+    DEB_HOST_ARCHITECTURE=x86
   elif [ "${DEB_HOST_ARCH_CPU}" = "i386" ]
   then
-    instruction_set=i686
-    architecture=x86
+    DEB_HOST_ARCH_ISET=i686
+    DEB_HOST_ARCHITECTURE=x86
   elif [ "${DEB_HOST_ARCH_CPU}" = "powerpc" ]
   then
-    instruction_set=native
-    architecture=power
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=power
   elif [ "${DEB_HOST_ARCH_CPU}" = "ppc64" ]
   then
-    instruction_set=native
-    architecture=power
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=power
   elif [ "${DEB_HOST_ARCH_CPU}" = "armeb" ]
   then
-    instruction_set=native
-    architecture=arm
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=arm
   elif [ "${DEB_HOST_ARCH_CPU}" = "hppa" ]
   then
-    instruction_set=native
-    architecture=parisc
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=parisc
   elif [ "${DEB_HOST_ARCH_CPU}" = "mips" ]
   then
-    instruction_set=native
-    architecture=mips32r2
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=mips32r2
   elif [ "${DEB_HOST_ARCH_CPU}" = "mipsel" ]
   then
-    instruction_set=native
-    architecture=mips32r2
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=mips32r2
   elif [ "${DEB_HOST_ARCH_CPU}" = "sparc" ]
   then
-    instruction_set=native
-    architecture=sparc
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=sparc
   elif [ "${DEB_HOST_ARCH_CPU}" = "sparc64" ]
   then
-    instruction_set=native
-    architecture=sparc
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=sparc
   else
-    instruction_set=native
-    architecture=${DEB_HOST_ARCH_CPU}
+    DEB_HOST_ARCH_ISET=native
+    DEB_HOST_ARCHITECTURE=${DEB_HOST_ARCH_CPU}
   fi
 
   DEB_HOST_ARCH_CABI=${DEB_HOST_GNU_SYSTEM#${DEB_HOST_ARCH_OS}}
@@ -60,17 +60,34 @@ do
   cabis="${cabis} ${DEB_HOST_ARCH_CABI}"
   cpus="${cpus} ${DEB_HOST_ARCH_CPU}"
   multiarchs="${multiarchs} ${DEB_HOST_MULTIARCH}"
-  echo -n "feature.compose <target-architecture>${arch} : <address-model>${DEB_HOST_ARCH_BITS} <architecture>${architecture} <instruction-set>${instruction_set} <multiarch>${DEB_HOST_MULTIARCH} <kernel>${DEB_HOST_ARCH_OS} <abi>${DEB_HOST_ARCH_CABI} <cpu>${DEB_HOST_ARCH_CPU} <endian>${DEB_HOST_ARCH_ENDIAN} ;\n" >>/tmp/multiarch.sed
+
+  echo -n "feature.compose <target-architecture>${architecture} :"  >>${temp_output}
+  echo -n " <address-model>${DEB_HOST_ARCH_BITS}"                   >>${temp_output}
+  echo -n " <architecture>${DEB_HOST_ARCHITECTURE}"                 >>${temp_output}
+  echo -n " <instruction-set>${DEB_HOST_ARCH_ISET}"                 >>${temp_output}
+  echo -n " <multiarch>${DEB_HOST_MULTIARCH}"                       >>${temp_output}
+  echo -n " <kernel>${DEB_HOST_ARCH_OS}"                            >>${temp_output}
+  echo -n " <abi>${DEB_HOST_ARCH_CABI}"                             >>${temp_output}
+  echo -n " <cpu>${DEB_HOST_ARCH_CPU}"                              >>${temp_output}
+  echo -n " <endian>${DEB_HOST_ARCH_ENDIAN}"                        >>${temp_output}
+  echo -n " ;\n"                                                    >>${temp_output}
+
+  # Then unset all the variables
+  eval $(dpkg-architecture -a${architecture} -u 2>/dev/null)
 done
 
-kernels=`echo ${kernels} | sed -re "s/ /\n/g" | sort | uniq`
-cabis=`echo ${cabis} | sed -re "s/ /\n/g" | sort | uniq`
-cpus=`echo ${cpus} | sed -re "s/ /\n/g" | sort | uniq`
-multiarchs=`echo ${multiarchs} | sed -re "s/ /\n/g" | sort | uniq`
-echo -n "feature.extend kernel : `echo ${kernels}` ;\n" >>/tmp/multiarch.sed
-echo -n "feature.extend abi : `echo ${cabis}` ;\n" >>/tmp/multiarch.sed
-echo -n "feature.extend cpu : `echo ${cpus}` ;\n" >>/tmp/multiarch.sed
-echo -n "feature.extend multiarch : `echo ${multiarchs}` ;\n" >>/tmp/multiarch.sed
+kernels=$(echo ${kernels} | sed -re "s/ /\n/g" | sort | uniq)
+echo -n "feature.extend kernel : $(echo ${kernels}) ;\n" >>${temp_output}
 
-cat multiarch.jam.in | sed -re "s@### BEGIN GENERATED CODE@### BEGIN GENERATED CODE\n`cat /tmp/multiarch.sed`@" > multiarch.jam
+cabis=$(echo ${cabis} | sed -re "s/ /\n/g" | sort | uniq)
+echo -n "feature.extend abi : $(echo ${cabis}) ;\n" >>${temp_output}
 
+cpus=$(echo ${cpus} | sed -re "s/ /\n/g" | sort | uniq)
+echo -n "feature.extend cpu : $(echo ${cpus}) ;\n" >>${temp_output}
+
+multiarchs=$(echo ${multiarchs} | sed -re "s/ /\n/g" | sort | uniq)
+echo -n "feature.extend multiarch : $(echo ${multiarchs}) ;\n" >>${temp_output}
+
+sed multiarch.jam.in -re "s@### BEGIN GENERATED CODE@### BEGIN GENERATED CODE\n$(cat ${temp_output})@" > multiarch.jam
+
+rm ${temp_output}
